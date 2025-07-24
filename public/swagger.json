@@ -1,0 +1,439 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Calendar API",
+    "description": "API for managing calendar events and scheduling meetings",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://google-calendar-app-865090871947.asia-south1.run.app",
+      "description": "Stagging server"
+    }
+  ],
+  "paths": {
+    "/api/free-slots": {
+      "post": {
+        "summary": "Get available time slots",
+        "description": "Returns a list of available time slots for given email addresses and date",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FreeSlotsRequest"
+              },
+              "example": {
+                "emails": ["user@example.com"],
+                "dateTime": "2025-07-17T10:00:00Z",
+                "duration": 30,
+                "title": "Team Meeting",
+                "description": "Weekly team sync",
+                "attendees": ["attendee@example.com"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreeSlotsResponse"
+                },
+                "example": {
+                  "slots": [
+                    "2025-07-17T10:00:00Z",
+                    "2025-07-17T10:30:00Z",
+                    "2025-07-17T11:00:00Z"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Validation Error",
+                  "details": "\"emails\" is required",
+                  "code": "VALIDATION_ERROR"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Calendar access error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Calendar Access Error",
+                  "details": "Error accessing calendar for user@example.com",
+                  "code": "CALENDAR_ACCESS_ERROR"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Calendar not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Calendar Not Found",
+                  "details": "Calendar not found for email: user@example.com",
+                  "code": "CALENDAR_NOT_FOUND"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Internal Server Error",
+                  "details": "An unexpected error occurred",
+                  "code": "INTERNAL_ERROR"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Service Unavailable",
+                  "details": "Calendar service is not initialized. Please check your configuration.",
+                  "code": "SERVICE_UNAVAILABLE"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/schedule-meeting": {
+      "post": {
+        "summary": "Schedule a meeting",
+        "description": "Creates a new meeting with Google Meet integration",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleMeetingRequest"
+              },
+              "example": {
+                "dateTime": "2025-07-17T10:00:00Z",
+                "duration": 30,
+                "title": "Project Review",
+                "description": "Monthly project status review",
+                "attendees": ["attendee1@example.com", "attendee2@example.com"],
+                "timeZone": "Asia/Kolkata"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Meeting scheduled successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleMeetingResponse"
+                },
+                "example": {
+                  "meetingEvent": {
+                    "id": "abc123",
+                    "summary": "Project Review",
+                    "description": "Monthly project status review",
+                    "start": {
+                      "dateTime": "2025-07-17T10:00:00Z",
+                      "timeZone": "Asia/Kolkata"
+                    },
+                    "end": {
+                      "dateTime": "2025-07-17T10:30:00Z",
+                      "timeZone": "Asia/Kolkata"
+                    },
+                    "attendees": [
+                      {"email": "attendee1@example.com"},
+                      {"email": "attendee2@example.com"}
+                    ],
+                    "conferenceData": {
+                      "conferenceId": "meet-abc123",
+                      "entryPoints": [
+                        {
+                          "entryPointType": "video",
+                          "uri": "https://meet.google.com/abc-defg-hij"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Validation Error",
+                  "details": "\"title\" is required",
+                  "code": "VALIDATION_ERROR"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Authentication Error",
+                  "details": "OAuth credentials not configured",
+                  "code": "AUTH_ERROR"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Service Unavailable",
+                  "details": "Calendar service is not initialized. Please check your configuration.",
+                  "code": "SERVICE_UNAVAILABLE"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "FreeSlotsRequest": {
+        "type": "object",
+        "required": ["emails", "dateTime"],
+        "properties": {
+          "emails": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "email"
+            },
+            "description": "Email addresses of the calendars to check"
+          },
+          "dateTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Start date and time in ISO 8601 format"
+          },
+          "duration": {
+            "type": "integer",
+            "minimum": 15,
+            "maximum": 120,
+            "default": 30,
+            "description": "Duration of the slot in minutes"
+          },
+          "title": {
+            "type": "string",
+            "description": "Optional meeting title"
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional meeting description"
+          },
+          "attendees": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "email"
+            },
+            "description": "Optional list of attendee email addresses"
+          }
+        }
+      },
+      "FreeSlotsResponse": {
+        "type": "object",
+        "properties": {
+          "slots": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "List of available time slots in ISO 8601 format"
+          }
+        }
+      },
+      "ScheduleMeetingRequest": {
+        "type": "object",
+        "required": ["dateTime", "title", "description", "attendees", "timeZone"],
+        "properties": {
+          "dateTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Start date and time in ISO 8601 format"
+          },
+          "duration": {
+            "type": "integer",
+            "minimum": 15,
+            "maximum": 120,
+            "default": 30,
+            "description": "Duration of the meeting in minutes"
+          },
+          "title": {
+            "type": "string",
+            "description": "Meeting title"
+          },
+          "description": {
+            "type": "string",
+            "description": "Meeting description"
+          },
+          "attendees": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "email"
+            },
+            "minItems": 1,
+            "description": "List of attendee email addresses"
+          },
+          "timeZone": {
+            "type": "string",
+            "description": "Time zone for the meeting (e.g., 'Asia/Kolkata')"
+          }
+        }
+      },
+      "ScheduleMeetingResponse": {
+        "type": "object",
+        "properties": {
+          "meetingEvent": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Unique identifier for the meeting"
+              },
+              "summary": {
+                "type": "string",
+                "description": "Meeting title"
+              },
+              "description": {
+                "type": "string",
+                "description": "Meeting description"
+              },
+              "start": {
+                "type": "object",
+                "properties": {
+                  "dateTime": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "timeZone": {
+                    "type": "string"
+                  }
+                }
+              },
+              "end": {
+                "type": "object",
+                "properties": {
+                  "dateTime": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "timeZone": {
+                    "type": "string"
+                  }
+                }
+              },
+              "attendees": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    }
+                  }
+                }
+              },
+              "conferenceData": {
+                "type": "object",
+                "properties": {
+                  "conferenceId": {
+                    "type": "string"
+                  },
+                  "entryPoints": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "entryPointType": {
+                          "type": "string"
+                        },
+                        "uri": {
+                          "type": "string",
+                          "format": "uri"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error type"
+          },
+          "details": {
+            "type": "string",
+            "description": "Detailed error message"
+          },
+          "code": {
+            "type": "string",
+            "description": "Error code"
+          }
+        }
+      }
+    }
+  }
+}
