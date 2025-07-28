@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Google Calendar OAuth Setup Instructions</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        .step {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Google Calendar OAuth Setup Instructions</h1>
+    
+    <div class="step">
+        <h2>Step 1: Configure OAuth Consent Screen</h2>
+        <ol>
+            <li>Go to the <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console Credentials page</a></li>
+            <li>Select your project</li>
+            <li>Click "Configure Consent Screen" if not already configured</li>
+            <li>Choose "External" user type</li>
+            <li>Fill in the required information (app name, user support email, developer contact)</li>
+            <li>Add the following scopes:
+                <ul>
+                    <li>https://www.googleapis.com/auth/calendar.events</li>
+                    <li>https://www.googleapis.com/auth/calendar</li>
+                </ul>
+            </li>
+            <li>Add your test users' email addresses</li>
+        </ol>
+    </div>
+
+    <div class="step">
+        <h2>Step 2: Create OAuth Client ID</h2>
+        <ol>
+            <li>In the Credentials page, click "Create Credentials" > "OAuth Client ID"</li>
+            <li>Choose "Web application" as the application type</li>
+            <li>Add authorized redirect URI: <code>http://localhost:8086/oauth2callback</code></li>
+            <li>Click "Create"</li>
+            <li>Save the generated Client ID and Client Secret</li>
+        </ol>
+    </div>
+
+    <div class="step">
+        <h2>Step 3: Generate Refresh Token</h2>
+        <ol>
+            <li>Install the Google OAuth2 command line tool:
+                <code>npm install -g google-oauth2-cli</code>
+            </li>
+            <li>Run the following command, replacing CLIENT_ID and CLIENT_SECRET with your values:
+                <pre><code>google-oauth2-cli --client_id=YOUR_CLIENT_ID \
+    --client_secret=YOUR_CLIENT_SECRET \
+    --scope=https://www.googleapis.com/auth/calendar.events,https://www.googleapis.com/auth/calendar</code></pre>
+            </li>
+            <li>Follow the authorization URL in your browser</li>
+            <li>Grant access to your Google Calendar</li>
+            <li>Copy the generated refresh token</li>
+        </ol>
+    </div>
+
+    <div class="step">
+        <h2>Step 4: Update Environment Variables</h2>
+        <ol>
+            <li>Open your .env file</li>
+            <li>Update the GOOGLE_REFRESH_TOKEN value with your new refresh token</li>
+            <li>Restart your application</li>
+        </ol>
+    </div>
+
+    <div class="step">
+        <h2>Important Notes</h2>
+        <ul>
+            <li>Keep your Client ID, Client Secret, and Refresh Token secure</li>
+            <li>Refresh tokens don't expire unless explicitly revoked or unused for an extended period</li>
+            <li>If you get "invalid_grant" errors, repeat Step 3 to generate a new refresh token</li>
+        </ul>
+    </div>
+</body>
+</html>

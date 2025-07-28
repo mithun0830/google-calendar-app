@@ -4,6 +4,7 @@ const Joi = require('joi');
 const dotenv = require('dotenv');
 const axios = require('axios');
 const { JWT } = require('google-auth-library');
+const logger = require('./logger');
 
 dotenv.config();
 
@@ -23,7 +24,9 @@ const SERVICE_ACCOUNT_PRIVATE_KEY = process.env.SERVICE_ACCOUNT_PRIVATE_KEY;
 class GoogleCalendarAPI {
   constructor() {
     try {
+      logger.info('Initializing Google Calendar API');
       if (!SERVICE_ACCOUNT_EMAIL || !SERVICE_ACCOUNT_PRIVATE_KEY) {
+        logger.error('Service account credentials missing');
         throw new Error('Service account credentials are not properly configured in environment variables.');
       }
 
@@ -42,6 +45,7 @@ class GoogleCalendarAPI {
 
       // Initialize OAuth2 client for write operations if credentials are available
       const hasValidOAuth = CLIENT_ID && CLIENT_SECRET && REFRESH_TOKEN;
+      logger.info('Checking OAuth credentials', { hasValidOAuth });
       if (hasValidOAuth) {
         this.oauth2Client = new google.auth.OAuth2(
           CLIENT_ID,
@@ -61,10 +65,14 @@ class GoogleCalendarAPI {
           auth: this.oauth2Client
         });
       } else {
-        console.warn('OAuth credentials not configured. Meeting creation will be unavailable.');
+        logger.warn('OAuth credentials not configured. Meeting creation will be unavailable.');
       }
 
     } catch (error) {
+      logger.error('Failed to initialize calendar services', { 
+        error: error.message,
+        stack: error.stack
+      });
       throw new Error(`Failed to initialize calendar services: ${error.message}`);
     }
   }
@@ -249,9 +257,22 @@ app.post('/api/free-slots', async (req, res) => {
 
 // API route for scheduling a meeting
 app.post('/api/schedule-meeting', async (req, res) => {
+  logger.info('Received schedule-meeting request', {
+    path: '/api/schedule-meeting',
+    method: 'POST',
+    body: {
+      ...req.body,
+      attendees: req.body.attendees ? req.body.attendees.length : 0 // Log only the count for privacy
+    }
+  });
+
   try {
     const { error, value } = scheduleMeetingSchema.validate(req.body);
     if (error) {
+      logger.error('Validation error in schedule-meeting', {
+        error: error.details[0].message,
+        body: req.body
+      });
       return res.status(400).json({ 
         error: 'Validation Error',
         details: error.details[0].message,
@@ -260,6 +281,7 @@ app.post('/api/schedule-meeting', async (req, res) => {
     }
 
     if (!calendar) {
+      logger.error('Calendar service not initialized');
       return res.status(503).json({
         error: 'Service Unavailable',
         details: 'Calendar service is not initialized. Please check your configuration.',
@@ -268,10 +290,29 @@ app.post('/api/schedule-meeting', async (req, res) => {
     }
 
     const { dateTime, duration, title, description, attendees, timeZone } = value;
+    logger.info('Creating meeting event', { 
+      dateTime,
+      duration,
+      timeZone,
+      attendeeCount: attendees.length
+    });
+
     const meetingPayload = generateMeetingPayload(dateTime, duration, title, description, attendees, timeZone);
     const meetingEvent = await calendar.createMeetEvent(meetingPayload);
+    
+    logger.info('Meeting event created successfully', {
+      eventId: meetingEvent.id,
+      status: meetingEvent.status
+    });
+    
     res.json({ meetingEvent });
   } catch (error) {
+    logger.error('Error in schedule-meeting endpoint', {
+      error: error.message,
+      stack: error.stack,
+      code: error.code,
+      response: error.response?.data
+    });
     if (error.message.includes('OAuth credentials not configured')) {
       return res.status(401).json({
         error: 'Authentication Error',
