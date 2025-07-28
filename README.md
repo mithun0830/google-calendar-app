@@ -4,6 +4,7 @@
 
 This is a Node.js application that interacts with Google Calendar API to find free time slots and schedule meetings. It provides a RESTful API for clients to query available time slots and create new meeting events.
 
+User this creds in env file
 <!-- export GOOGLE_CLIENT_ID="865090871947-8hmkitvfbksc8dn9u7b9suk2mhnkq4f9.apps.googleusercontent.com"
 export GOOGLE_CLIENT_SECRET="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"
 export GOOGLE_REFRESH_TOKEN="1//0gB8dpZiUnFbfCgYIARAAGBASNwF-L9Ir1tjcybYeqvUgM8Amg_kKU9EstRqD_geNZXJGWxf0rhsEufhcUl6BcXDmonvP_gMobb0"
