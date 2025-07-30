@@ -1,3 +1,13 @@
+/**
+ * Google Calendar API Integration
+ * 
+ * This file sets up an Express server that integrates with the Google Calendar API.
+ * It provides endpoints for finding free time slots and scheduling meetings.
+ * 
+ * The application uses both service account authentication for read-only operations
+ * and OAuth2 for write operations (creating events).
+ */
+
 const { google } = require('googleapis');
 const express = require('express');
 const Joi = require('joi');
@@ -21,7 +31,17 @@ const REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN;
 const SERVICE_ACCOUNT_EMAIL = process.env.SERVICE_ACCOUNT_EMAIL;
 const SERVICE_ACCOUNT_PRIVATE_KEY = process.env.SERVICE_ACCOUNT_PRIVATE_KEY;
 
+/**
+ * GoogleCalendarAPI
+ * 
+ * This class encapsulates all interactions with the Google Calendar API.
+ * It handles authentication, querying free/busy times, and creating events.
+ */
 class GoogleCalendarAPI {
+  /**
+   * Initialize the Google Calendar API client
+   * Sets up both service account (read-only) and OAuth2 (read-write) authentication
+   */
   constructor() {
     try {
       logger.info('Initializing Google Calendar API');
@@ -77,6 +97,12 @@ class GoogleCalendarAPI {
     }
   }
 
+  /**
+   * Create a new meeting event in the primary calendar
+   * @param {Object} eventData - The event details (title, time, attendees, etc.)
+   * @returns {Object} The created event data
+   * @throws {Error} If OAuth credentials are not configured or if event creation fails
+   */
   async createMeetEvent(eventData) {
     if (!this.calendarServiceReadWrite) {
       throw new Error('OAuth credentials not configured. Cannot create meetings.');
@@ -97,6 +123,15 @@ class GoogleCalendarAPI {
     return event.data;
   }
 
+  /**
+   * Get free time slots for a group of users
+   * @param {Object} params - The parameters for finding free slots
+   * @param {string[]} params.emails - List of email addresses to check
+   * @param {string} params.dateTime - The start date and time to check from
+   * @param {number} params.duration - The duration of the slot in minutes
+   * @returns {string[]} List of free time slots in ISO 8601 format
+   * @throws {Error} If there's an issue accessing calendars or processing the request
+   */
   async getFreeSlots({ emails, dateTime, duration }) {
     try {
       const startDate = new Date(dateTime);
@@ -132,6 +167,14 @@ class GoogleCalendarAPI {
     }
   }
 
+  /**
+   * Calculate free time slots based on busy times
+   * @param {Date} start - The start time to check from
+   * @param {Date} end - The end time to check until
+   * @param {Object[]} busySlots - List of busy time slots
+   * @param {number} duration - The duration of each slot in minutes
+   * @returns {string[]} List of free time slots in ISO 8601 format
+   */
   calculateFreeSlots(start, end, busySlots, duration = 30) {
     const freeSlots = [];
     const slotDuration = duration;
@@ -159,8 +202,12 @@ class GoogleCalendarAPI {
     return freeSlots.sort((a, b) => new Date(a) - new Date(b));
   }
 
+  /**
+   * Format a date into ISO 8601 string format
+   * @param {Date} date - The date to format
+   * @returns {string} The date in ISO 8601 format
+   */
   formatTime(date) {
-    // Return time in ISO 8601 format
     return date.toISOString();
   }
 }
@@ -173,13 +220,20 @@ try {
   console.warn('Failed to initialize Google Calendar API:', error.message);
 }
 
-// Basic request logging
+/**
+ * Middleware for logging all incoming HTTP requests
+ * Logs timestamp, HTTP method, and requested URL
+ */
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
   next();
 });
 
-// Enable CORS for development
+/**
+ * CORS middleware configuration
+ * Enables Cross-Origin Resource Sharing for all routes
+ * Allows specified HTTP methods and headers
+ */
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
@@ -208,6 +262,14 @@ app.get('/test', (req, res) => {
 });
 
 // API route for free slots
+/**
+ * API endpoint to get free time slots
+ * @route POST /api/free-slots
+ * @param {string[]} req.body.emails - List of email addresses to check
+ * @param {string} req.body.dateTime - The start date and time to check from
+ * @param {number} req.body.duration - The duration of the slot in minutes
+ * @returns {Object} JSON object containing free time slots
+ */
 app.post('/api/free-slots', async (req, res) => {
   try {
     const { error, value } = freeSlotsSchema.validate(req.body);
@@ -256,6 +318,17 @@ app.post('/api/free-slots', async (req, res) => {
 });
 
 // API route for scheduling a meeting
+/**
+ * API endpoint to schedule a meeting
+ * @route POST /api/schedule-meeting
+ * @param {string} req.body.dateTime - The start date and time of the meeting
+ * @param {number} req.body.duration - The duration of the meeting in minutes
+ * @param {string} req.body.title - The title of the meeting
+ * @param {string} req.body.description - The description of the meeting
+ * @param {string[]} req.body.attendees - List of attendee email addresses
+ * @param {string} req.body.timeZone - The time zone for the meeting
+ * @returns {Object} JSON object containing the created meeting event details
+ */
 app.post('/api/schedule-meeting', async (req, res) => {
   logger.info('Received schedule-meeting request', {
     path: '/api/schedule-meeting',
@@ -335,6 +408,16 @@ app.post('/api/schedule-meeting', async (req, res) => {
   }
 });
 
+/**
+ * Generate the payload for creating a Google Calendar event
+ * @param {string} dateTime - The start date and time of the meeting
+ * @param {number} duration - The duration of the meeting in minutes
+ * @param {string} title - The title of the meeting
+ * @param {string} description - The description of the meeting
+ * @param {string[]} attendees - List of attendee email addresses
+ * @param {string} timeZone - The time zone for the meeting
+ * @returns {Object} The event payload for the Google Calendar API
+ */
 function generateMeetingPayload(dateTime, duration, title, description, attendees, timeZone) {
   const startDate = new Date(dateTime);
   const endDate = new Date(startDate.getTime() + duration * 60000);
@@ -357,17 +440,27 @@ function generateMeetingPayload(dateTime, duration, title, description, attendee
   };
 }
 
-// Default 404 handler
+/**
+ * Default 404 (Not Found) handler
+ * Handles all requests to undefined routes
+ */
 app.use((req, res) => {
   res.status(404).send('404 Not Found');
 });
 
-// Error handling middleware
+/**
+ * Global error handling middleware
+ * Catches all unhandled errors and returns a 500 response
+ * @param {Error} err - The error object
+ */
 app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error', details: err.message });
 });
 
 // Input validation schemas
+/**
+ * Joi schema for validating free slots request
+ */
 const freeSlotsSchema = Joi.object({
   emails: Joi.array().items(Joi.string().email()).min(1).required(),
   dateTime: Joi.date().iso().required(),
@@ -377,6 +470,9 @@ const freeSlotsSchema = Joi.object({
   attendees: Joi.array().items(Joi.string().email()).optional()
 });
 
+/**
+ * Joi schema for validating schedule meeting request
+ */
 const scheduleMeetingSchema = Joi.object({
   dateTime: Joi.date().iso().required(),
   duration: Joi.number().integer().min(15).max(120).default(30),
@@ -389,6 +485,7 @@ const scheduleMeetingSchema = Joi.object({
 const PORT = process.env.PORT || 8086;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+  logger.info(`Server started`, { port: PORT });
 });
 
 module.exports = { GoogleCalendarAPI, app };
